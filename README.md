@@ -1,121 +1,101 @@
 # draft-assist
 
-A simple Python tool to assist with Fantasy Sports Drafting, written with love in Python.
+A CLI tool for Fantasy Sports draft preparation, powered by the Yahoo Fantasy Sports API. Written in Python.
 
 ## Features
 
-- **Custom Rankings**: Import your player rankings from a CSV file
-- **Yahoo Integration**: Connect to Yahoo Fantasy Sports API for live draft data
-- **Best Available**: Quickly see the best available players based on your rankings
-- **Position Filtering**: Filter suggestions by position
-- **CLI Interface**: Easy-to-use command line interface powered by Typer
+- **Yahoo Integration**: OAuth2 authentication with the Yahoo Fantasy Sports API
+- **League Discovery**: List your leagues across NFL, MLB, NBA, and other Yahoo Fantasy games
+- **CLI Interface**: Command line interface powered by Typer
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.13+
 - [Poetry](https://python-poetry.org/)
 
 ### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/tech1ndex/draft-assist.git
 cd draft-assist
 
 # Install dependencies
-poetry install
-
-# Or use make
 make install
 ```
 
 ## Usage
 
-### Prepare Your Rankings
+### 1. Create a Yahoo App
 
-Create a CSV file with your player rankings:
+Go to [Yahoo Developer](https://developer.yahoo.com/apps/) and create an app with the **Fantasy Sports** API permission. Set the redirect URI to `https://localhost:8888`.
 
-```csv
-rank,name,position,team,notes
-1,Patrick Mahomes,QB,KC,Elite QB
-2,Travis Kelce,TE,KC,Top TE
-3,Tyreek Hill,WR,MIA,Speed demon
-...
-```
-
-See `rankings.example.csv` for a complete example.
-
-### CLI Commands
-
-#### View Your Rankings
+### 2. Set Environment Variables
 
 ```bash
-# Show top 20 players
-draft-assist rankings --file rankings.csv
-
-# Filter by position
-draft-assist rankings --file rankings.csv --position WR
-
-# Show top N
-draft-assist rankings --file rankings.csv --top 50
-```
-
-#### Best Available
-
-```bash
-# Show best available players
-draft-assist available --file rankings.csv
-
-# With a list of taken players
-draft-assist available --file rankings.csv --taken taken.txt
-
-# Filter by position
-draft-assist available --file rankings.csv --position RB --top 5
-```
-
-#### Yahoo Fantasy Integration
-
-```bash
-# Authenticate with Yahoo
 export YAHOO_CLIENT_ID="your-client-id"
 export YAHOO_CLIENT_SECRET="your-client-secret"
-draft-assist auth
+```
 
-# List your leagues
+Or create a `.env` file in the project root:
+
+```env
+YAHOO_CLIENT_ID=your-client-id
+YAHOO_CLIENT_SECRET=your-client-secret
+```
+
+### 3. Authenticate
+
+```bash
+draft-assist auth
+```
+
+This opens your browser for Yahoo OAuth. After authorizing, the CLI prints access/refresh tokens to export:
+
+```bash
+export YAHOO_ACCESS_TOKEN=...
+export YAHOO_REFRESH_TOKEN=...
+```
+
+### 4. List Your Leagues
+
+```bash
+# NFL leagues (default)
 draft-assist leagues
 
-# Start draft assistant
-draft-assist draft --league "nfl.l.123456"
+# MLB leagues
+draft-assist leagues -g mlb
+
+# NBA leagues
+draft-assist leagues -g nba
 ```
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `YAHOO_CLIENT_ID` | Yahoo API client ID |
-| `YAHOO_CLIENT_SECRET` | Yahoo API client secret |
-| `YAHOO_LEAGUE_ID` | Default league ID |
-| `RANKINGS_FILE` | Path to rankings CSV file |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `YAHOO_CLIENT_ID` | Yahoo API client ID | |
+| `YAHOO_CLIENT_SECRET` | Yahoo API client secret | |
+| `YAHOO_ACCESS_TOKEN` | OAuth access token (from `auth` command) | |
+| `YAHOO_REFRESH_TOKEN` | OAuth refresh token (from `auth` command) | |
+| `YAHOO_REDIRECT_URI` | OAuth redirect URI | `https://localhost:8888` |
 
 ## Development
 
 ```bash
-# Install all dependencies including dev
-make install
+make install    # Install all dependencies (dev + test)
+make lint       # Run mypy + ruff check + ruff format --check
+make format     # Auto-fix ruff issues and format code
+make test       # Run pytest with coverage
+make all        # install + lint + test
+make clean      # Remove caches and coverage files
+```
 
-# Run linting
-make lint
+Run a single test:
 
-# Run tests
-make test
-
-# Format code
-make format
-
-# Run all checks
-make all
+```bash
+poetry run pytest tests/test_yahoo.py::test_authenticate_success -v
 ```
 
 ## Project Structure
@@ -123,22 +103,20 @@ make all
 ```
 draft-assist/
 ├── src/draft_assist/
-│   ├── cli/              # Typer CLI commands
-│   │   ├── __init__.py
+│   ├── cli/                # Typer CLI commands
 │   │   └── main.py
-│   ├── external/         # External API clients
-│   │   ├── __init__.py
-│   │   ├── models.py     # Pydantic models
-│   │   └── yahoo.py      # Yahoo Fantasy client
-│   ├── logger/           # Logging setup
-│   │   ├── __init__.py
+│   ├── external/           # External API clients
+│   │   ├── models.py       # Pydantic models (League)
+│   │   ├── oauth_server.py # OAuth callback server + SSL certs
+│   │   └── yahoo.py        # Yahoo Fantasy API client
+│   ├── logger/             # Logging setup
 │   │   └── setup.py
-│   ├── __init__.py
-│   ├── rankings.py       # Rankings management
-│   └── settings.py       # Configuration
+│   └── settings.py         # Configuration (YahooSettings)
 ├── tests/
+│   ├── test_cli.py
 │   ├── test_models.py
-│   └── test_rankings.py
+│   ├── test_settings.py
+│   └── test_yahoo.py
 ├── pyproject.toml
 ├── Makefile
 └── README.md

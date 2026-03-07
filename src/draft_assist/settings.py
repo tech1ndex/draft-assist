@@ -1,20 +1,25 @@
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings
 
 
 class YahooSettings(BaseSettings):
-
-
     client_id: str = ""
     client_secret: str = ""
-    redirect_uri: str = "oob"
-    token_file_path: str = "yahoo_token.json"
+    redirect_uri: str = "https://localhost:8888"
+    access_token: str = ""
+    refresh_token: str = ""
+    api_url: str = "https://fantasysports.yahooapis.com/fantasy/v2"
+    token_url: str = "https://api.login.yahoo.com/oauth2/get_token"  # noqa: S105
+    oauth_base_url: str = "https://api.login.yahoo.com/oauth2"
+
+    class Config:
+        env_file = ".env"
+        extra = "ignore"
+        env_prefix = "YAHOO_"
+        case_sensitive = False
 
 
-class DraftSettings(BaseSettings):
-
-
-    rankings_file_path: str = "rankings.csv"
-    league_id: str = ""
-    team_id: str = ""
-    auto_draft: bool = False
-    draft_delay_seconds: float = 5.0
+@lru_cache
+def get_yahoo_settings() -> YahooSettings:
+    return YahooSettings()

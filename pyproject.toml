@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A simple Python tool to assist with Fantasy Sports Drafting."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 authors = [{ name = "Victor Bajada" }]
 maintainers = [{ name = "Victor Bajada" }]
 classifiers = [
@@ -35,13 +35,15 @@ name = "draft-assist"
 packages = [{ include = "draft_assist", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.13"
 pydantic = "^2.10.0"
 pydantic-settings = "^2.6.0"
 requests = "^2.32.0"
 loguru = "^0.7.3"
 tenacity = "^9.0.0"
 typer = {extras = ["all"], version = "^0.15.0"}
+black = "^26.1.0"
+cryptography = "^46.0.5"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.8.0"
@@ -129,7 +131,13 @@ ignore = [
     "PLR0913",
     "COM812",
     "ISC001",
+    "G004",     # loguru supports f-strings natively
+    "PLE1205",  # false positive: ruff assumes stdlib logging, not loguru
+    "TRY401",   # loguru.exception already includes traceback
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "SLF001", "BLE001", "S110", "SIM105", "PLR2004"]
 
 [tool.mypy]
 strict = false

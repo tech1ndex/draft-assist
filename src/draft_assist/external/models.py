@@ -1,6 +1,26 @@
 from pydantic import BaseModel
 
 
+class Player(BaseModel):
+    name: str
+    position: str
+    team: str
+
+
+class RankedPlayer(BaseModel):
+    rank: int
+    player: Player
+    notes: str = ""
+
+
+class DraftPick(BaseModel):
+    pick: int
+    round: int
+    team_key: str
+    player_key: str
+    player_name: str = ""
+
+
 class League(BaseModel):
     league_id: str
     name: str

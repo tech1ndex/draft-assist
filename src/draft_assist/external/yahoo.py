@@ -11,9 +11,14 @@ from tenacity import (
     wait_exponential,
 )
 
-from draft_assist.external.models import League
+from draft_assist.external.models import DraftPick, League
 from draft_assist.external.oauth_server import wait_for_auth_code
-from draft_assist.settings import YahooSettings, get_yahoo_settings
+from draft_assist.settings import (
+    DraftSettings,
+    YahooSettings,
+    get_draft_settings,
+    get_yahoo_settings,
+)
 
 
 def _iter_league_dicts(game_val: dict) -> list[dict]:
@@ -42,8 +47,13 @@ def _build_league(data: dict) -> League:
 
 
 class YahooFantasyClient:
-    def __init__(self, settings: YahooSettings | None = None) -> None:
+    def __init__(
+        self, settings: YahooSettings, draft_settings: DraftSettings | None = None
+    ) -> None:
         self._settings = settings or get_yahoo_settings()
+        self._draft_settings: DraftSettings | None = (
+            draft_settings or get_draft_settings()
+        )
         self._access_token: str | None = self._settings.access_token or None
         self._refresh_token: str | None = self._settings.refresh_token or None
 
@@ -212,3 +222,60 @@ class YahooFantasyClient:
         except (requests.RequestException, RetryError) as e:
             logger.error(f"Failed to get league: {e}")
             return None
+
+    def get_drafts(self, league_id: str) -> dict | None:
+        league_id = self._draft_settings.league_id if league_id is None else league_id
+        endpoint = f"/league/{league_id}"
+        return self._make_request(endpoint)
+
+    def get_draft_results(self, league_key: str) -> list[DraftPick]:
+        endpoint = f"/league/{league_key}/draftresults/players"
+        try:
+            response = self._make_request(endpoint)
+        except (requests.RequestException, RetryError) as e:
+            logger.error(f"Failed to get draft results: {e}")
+            return []
+        return self._parse_draft_results(response)
+
+    @staticmethod
+    def _extract_player_name(draft_result: dict) -> str:
+        players = draft_result.get("players", {})
+        if not isinstance(players, dict):
+            return ""
+        for pv in players.values():
+            if not isinstance(pv, dict):
+                continue
+            player_data = pv.get("player", [])
+            if player_data and isinstance(player_data[0], list):
+                for attr in player_data[0]:
+                    if isinstance(attr, dict) and "name" in attr:
+                        return attr["name"].get("full", "")
+        return ""
+
+    @staticmethod
+    def _parse_draft_results(response: dict) -> list[DraftPick]:
+        league_data = response.get("fantasy_content", {}).get("league", [])
+        if len(league_data) < 2:  # noqa: PLR2004
+            return []
+
+        draft_results = league_data[1].get("draft_results", {})
+        if not isinstance(draft_results, dict):
+            return []
+        picks: list[DraftPick] = []
+        for value in draft_results.values():
+            if not isinstance(value, dict):
+                continue
+            dr = value.get("draft_result", {})
+            if not dr:
+                continue
+
+            picks.append(
+                DraftPick(
+                    pick=int(dr.get("pick", 0)),
+                    round=int(dr.get("round", 0)),
+                    team_key=dr.get("team_key", ""),
+                    player_key=dr.get("player_key", ""),
+                    player_name=YahooFantasyClient._extract_player_name(dr),
+                )
+            )
+        return picks

@@ -152,6 +152,78 @@ def test_authenticate_via_browser(mock_browser, mock_wait, mock_auth, yahoo_sett
     mock_auth.assert_called_once_with("browser_auth_code")
 
 
+def test_parse_draft_results_empty():
+    response = {"fantasy_content": {"league": [{}]}}
+    result = YahooFantasyClient._parse_draft_results(response)
+    assert result == []
+
+
+def test_parse_draft_results_predraft_empty_list():
+    response = {
+        "fantasy_content": {
+            "league": [{"league_key": "469.l.9760"}, {"draft_results": []}]
+        }
+    }
+    result = YahooFantasyClient._parse_draft_results(response)
+    assert result == []
+
+
+def test_parse_draft_results_with_picks():
+    response = {
+        "fantasy_content": {
+            "league": [
+                {"league_key": "423.l.123"},
+                {
+                    "draft_results": {
+                        "0": {
+                            "draft_result": {
+                                "pick": 1,
+                                "round": 1,
+                                "team_key": "423.l.123.t.1",
+                                "player_key": "423.p.100",
+                                "players": {
+                                    "0": {
+                                        "player": [
+                                            [
+                                                {"name": {"full": "Patrick Mahomes"}},
+                                            ]
+                                        ]
+                                    }
+                                },
+                            }
+                        },
+                        "1": {
+                            "draft_result": {
+                                "pick": 2,
+                                "round": 1,
+                                "team_key": "423.l.123.t.2",
+                                "player_key": "423.p.200",
+                                "players": {
+                                    "0": {
+                                        "player": [
+                                            [
+                                                {"name": {"full": "Josh Allen"}},
+                                            ]
+                                        ]
+                                    }
+                                },
+                            }
+                        },
+                        "count": 2,
+                    }
+                },
+            ]
+        }
+    }
+    picks = YahooFantasyClient._parse_draft_results(response)
+    assert len(picks) == 2
+    assert picks[0].pick == 1
+    assert picks[0].player_name == "Patrick Mahomes"
+    assert picks[0].team_key == "423.l.123.t.1"
+    assert picks[1].pick == 2
+    assert picks[1].player_name == "Josh Allen"
+
+
 @patch("draft_assist.external.oauth_server.wrap_socket_ssl")
 def test_wait_for_auth_code_timeout(mock_ssl, yahoo_settings):
     mock_ssl.side_effect = lambda sock: sock  # skip SSL wrapping

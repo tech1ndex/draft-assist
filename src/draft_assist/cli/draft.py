@@ -2,11 +2,13 @@ import time
 from pathlib import Path
 from typing import Annotated
 
+import requests
 import typer
 from loguru import logger as loguru_logger
 from rich.console import Console
 from rich.live import Live
 from rich.table import Table
+from tenacity import RetryError
 
 from draft_assist.external.models import RankedPlayer
 from draft_assist.external.yahoo import YahooFantasyClient
@@ -152,12 +154,24 @@ def live(
             _build_live_table(players, 0, pos), console=console, refresh_per_second=1
         ) as live_display:
             while True:
-                picks = client.get_draft_results(league_id)
+                try:
+                    picks = client.get_draft_results(league_id)
+                except (requests.RequestException, RetryError) as e:
+                    live_display.console.print(f"  [red]API error: {e}[/red]")
+                    time.sleep(interval)
+                    continue
                 new_picks = [p for p in picks if p.pick not in seen_picks]
                 for pick in new_picks:
                     seen_picks.add(pick.pick)
                     if pick.player_name:
                         manager.mark_taken(pick.player_name)
+                        live_display.console.print(
+                            f"  Pick {pick.pick}: [bold]{pick.player_name}[/bold] taken"
+                        )
+                    else:
+                        live_display.console.print(
+                            f"[yellow]Pick {pick.pick}: could not resolve player name (key={pick.player_key})[/yellow]"
+                        )
                 if new_picks:
                     players = manager.get_best_available(position=pos, limit=limit)
                     live_display.update(

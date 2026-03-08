@@ -230,26 +230,28 @@ class YahooFantasyClient:
 
     def get_draft_results(self, league_key: str) -> list[DraftPick]:
         endpoint = f"/league/{league_key}/draftresults/players"
-        try:
-            response = self._make_request(endpoint)
-        except (requests.RequestException, RetryError) as e:
-            logger.error(f"Failed to get draft results: {e}")
-            return []
+        response = self._make_request(endpoint)
         return self._parse_draft_results(response)
 
     @staticmethod
     def _extract_player_name(draft_result: dict) -> str:
-        players = draft_result.get("players", {})
-        if not isinstance(players, dict):
-            return ""
-        for pv in players.values():
-            if not isinstance(pv, dict):
+        candidates = [
+            draft_result,
+            *(v for v in draft_result.values() if isinstance(v, dict)),
+        ]
+
+        for candidate in candidates:
+            players = candidate.get("players", {})
+            if not isinstance(players, dict):
                 continue
-            player_data = pv.get("player", [])
-            if player_data and isinstance(player_data[0], list):
-                for attr in player_data[0]:
-                    if isinstance(attr, dict) and "name" in attr:
-                        return attr["name"].get("full", "")
+            for pv in players.values():
+                if not isinstance(pv, dict):
+                    continue
+                player_data = pv.get("player", [])
+                if player_data and isinstance(player_data[0], list):
+                    for attr in player_data[0]:
+                        if isinstance(attr, dict) and "name" in attr:
+                            return attr["name"].get("full", "")
         return ""
 
     @staticmethod

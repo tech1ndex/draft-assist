@@ -1,7 +1,17 @@
 import csv
+import unicodedata
 from pathlib import Path
 
 from draft_assist.external.models import Player, RankedPlayer
+
+
+def _normalize_name(name: str) -> str:
+    """Lowercase and strip accents for consistent matching (e.g. Acuña → acuna)."""
+    return (
+        unicodedata.normalize("NFKD", name.lower())
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
 
 
 class RankingsManager:
@@ -35,19 +45,23 @@ class RankingsManager:
         return players
 
     def mark_taken(self, name: str) -> None:
-        self._taken.add(name.lower())
+        self._taken.add(_normalize_name(name))
 
     def get_best_available(
         self, position: str | None = None, limit: int = 10
     ) -> list[RankedPlayer]:
-        players = [p for p in self._players if p.player.name.lower() not in self._taken]
+        players = [
+            p
+            for p in self._players
+            if _normalize_name(p.player.name) not in self._taken
+        ]
         if position is not None:
             players = [p for p in players if p.player.position == position]
         return players[:limit]
 
     def get_player(self, name: str) -> RankedPlayer | None:
-        name_lower = name.lower()
+        normalized = _normalize_name(name)
         for p in self._players:
-            if p.player.name.lower() == name_lower:
+            if _normalize_name(p.player.name) == normalized:
                 return p
         return None

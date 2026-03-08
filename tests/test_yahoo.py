@@ -169,25 +169,33 @@ def test_parse_draft_results_predraft_empty_list():
 
 
 def test_parse_draft_results_with_picks():
+    """Yahoo nests player data under a numeric key inside draft_result."""
     response = {
         "fantasy_content": {
             "league": [
-                {"league_key": "423.l.123"},
+                {"league_key": "469.l.9760"},
                 {
                     "draft_results": {
                         "0": {
                             "draft_result": {
                                 "pick": 1,
                                 "round": 1,
-                                "team_key": "423.l.123.t.1",
-                                "player_key": "423.p.100",
-                                "players": {
-                                    "0": {
-                                        "player": [
-                                            [
-                                                {"name": {"full": "Patrick Mahomes"}},
+                                "team_key": "469.l.9760.t.6",
+                                "player_key": "469.p.11731",
+                                "0": {
+                                    "players": {
+                                        "0": {
+                                            "player": [
+                                                [
+                                                    {"player_key": "469.p.11731"},
+                                                    {
+                                                        "name": {
+                                                            "full": "Gunnar Henderson"
+                                                        }
+                                                    },
+                                                ]
                                             ]
-                                        ]
+                                        }
                                     }
                                 },
                             }
@@ -196,15 +204,18 @@ def test_parse_draft_results_with_picks():
                             "draft_result": {
                                 "pick": 2,
                                 "round": 1,
-                                "team_key": "423.l.123.t.2",
-                                "player_key": "423.p.200",
-                                "players": {
-                                    "0": {
-                                        "player": [
-                                            [
-                                                {"name": {"full": "Josh Allen"}},
+                                "team_key": "469.l.9760.t.3",
+                                "player_key": "469.p.60419",
+                                "0": {
+                                    "players": {
+                                        "0": {
+                                            "player": [
+                                                [
+                                                    {"player_key": "469.p.60419"},
+                                                    {"name": {"full": "Paul Skenes"}},
+                                                ]
                                             ]
-                                        ]
+                                        }
                                     }
                                 },
                             }
@@ -218,10 +229,10 @@ def test_parse_draft_results_with_picks():
     picks = YahooFantasyClient._parse_draft_results(response)
     assert len(picks) == 2
     assert picks[0].pick == 1
-    assert picks[0].player_name == "Patrick Mahomes"
-    assert picks[0].team_key == "423.l.123.t.1"
+    assert picks[0].player_name == "Gunnar Henderson"
+    assert picks[0].team_key == "469.l.9760.t.6"
     assert picks[1].pick == 2
-    assert picks[1].player_name == "Josh Allen"
+    assert picks[1].player_name == "Paul Skenes"
 
 
 @patch("draft_assist.external.oauth_server.wrap_socket_ssl")
